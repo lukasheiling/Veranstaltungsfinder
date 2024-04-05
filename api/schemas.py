@@ -15,7 +15,7 @@ class Item(ItemBase):
     owner_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserBase(BaseModel):
@@ -32,4 +32,20 @@ class User(UserBase):
     items: list[Item] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+        
+class EventBase(BaseModel):
+    name: str
+    date: str  # Format YYYY-MM-DD
+    venue: str
+
+
+class EventCreate(EventBase):
+    pass
+
+
+class Event(EventBase):
+    id: int
+
+    class Config:
+        from_attributes = True
