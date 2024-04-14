@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from . import crud, models, schemas
 from .database import Base
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 # Ersetze die folgende URL mit deiner tatsächlichen Datenbank-URL
 ASYNC_DB_URL = "sqlite+aiosqlite:///./sql_app.db"
@@ -11,6 +13,20 @@ async_engine = create_async_engine(ASYNC_DB_URL, echo=True)
 AsyncSessionLocal = sessionmaker(async_engine, expire_on_commit=False, class_=AsyncSession)
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:8080",  # Erlaube CORS-Anfragen von diesem Ursprung
+    "http://127.0.0.1:8080"   # Wenn dein Browser 127.0.0.1 verwendet, füge auch dies hinzu
+]
+
+# Konfiguriere die CORS-Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Erlaube allen Ursprüngen in der Liste
+    allow_credentials=True,
+    allow_methods=["*"],    # Erlaube alle Methoden
+    allow_headers=["*"],    # Erlaube alle Headers
+)
 
 # Asynchrone Dependency für Datenbanksessions
 async def get_async_db() -> AsyncSession:
