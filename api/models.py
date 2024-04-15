@@ -3,7 +3,6 @@ from sqlalchemy.orm import relationship
 
 from .database import Base
 
-
 class User(Base):
     __tablename__ = "users"
 
@@ -13,7 +12,6 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
     items = relationship("Item", back_populates="owner")
-
 
 class Item(Base):
     __tablename__ = "items"
@@ -25,7 +23,6 @@ class Item(Base):
 
     owner = relationship("User", back_populates="items")
     
-
 class Event(Base):
     __tablename__ = "events"
 
@@ -33,3 +30,4 @@ class Event(Base):
     name = Column(String, index=True)
     date = Column(String, index=True)  # Format YYYY-MM-DD
     venue = Column(String, index=True)
+    country = Column(String, index=True)  # Dieses Feld ist nun korrekt definiert.

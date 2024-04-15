@@ -1,6 +1,11 @@
 <template>
   <div id="app">
     <h1>Eventfinder</h1>
+    <div>
+      <label for="country">Country:</label>
+      <input type="text" id="country" v-model="country" placeholder="Enter country code (e.g., US, DE)">
+    </div>
+    <button @click="fetchEvents">Load Events</button>
     <ul>
       <li v-for="event in events" :key="event.id">
         <div class="event-name">{{ event.name }}</div>
@@ -20,15 +25,28 @@ export default {
   data() {
     return {
       events: [],
+      country: '',  // Stelle sicher, dass diese Variable mit dem Input-Feld gebunden ist
     };
   },
-  async created() {
-    try {
-      const response = await axios.get('http://127.0.0.1:8000/events/');
-      this.events = response.data;
-    } catch (error) {
-      console.error(error);
+  methods: {
+    async fetchEvents() {
+      console.log("Fetching events for country:", this.country);
+      if (!this.country) {
+        alert('Please enter a country code.');
+        return;
+      }
+      try {
+        console.log("Country before request:", this.country);  // Sollte den ausgewählten Ländercode anzeigen
+        const response = await axios.get(`http://127.0.0.1:8000/events/`, {
+          params: { country: this.country }
+        });
+        this.events = response.data;
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        alert(`Failed to fetch events: ${error.message}`);
+      }
     }
+
   },
 };
 </script>

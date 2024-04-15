@@ -33,13 +33,33 @@ async def create_user_item(db: AsyncSession, item: schemas.ItemCreate, user_id: 
     await db.refresh(db_item)
     return db_item
 
-async def create_event(db: AsyncSession, event: schemas.EventCreate):
-    db_event = models.Event(**event.dict())
-    db.add(db_event)  # Verwende direkt db.add()
-    await db.commit()
-    await db.refresh(db_event)
-    return db_event
+
+async def get_events(db: AsyncSession, country: str = None, start_date: str = None, end_date: str = None, skip: int = 0, limit: int = 30):
+    query = select(models.Event)
+
+    if country:
+        query = query.filter(models.Event.country == country)
+    if start_date and end_date:
+        query = query.filter(models.Event.date.between(start_date, end_date))
+
+    query = query.offset(skip).limit(limit)
+    result = await db.execute(query)
+    return result.scalars().all()
+
 
 async def get_events(db: AsyncSession, skip: int = 0, limit: int = 25):
     result = await db.execute(select(models.Event).offset(skip).limit(limit))
     return result.scalars().all()
+
+
+async def create_event(db: AsyncSession, event: schemas.EventCreate):
+    db_event = models.Event(
+        name=event.name,
+        date=event.date,
+        venue=event.venue,
+        country=event.country
+    )
+    db.add(db_event)
+    await db.commit()
+    await db.refresh(db_event)
+    return db_event

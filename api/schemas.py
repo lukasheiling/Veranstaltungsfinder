@@ -40,8 +40,12 @@ class EventBase(BaseModel):
     venue: str
 
 
-class EventCreate(EventBase):
-    pass
+class EventCreate(BaseModel):
+    name: str
+    date: str  # Format YYYY-MM-DD
+    venue: str
+    country: str  # Stellen Sie sicher, dass dieses Feld existiert
+
 
 
 class Event(EventBase):
