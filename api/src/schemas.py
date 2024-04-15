@@ -53,3 +53,9 @@ class Event(EventBase):
 
     class Config:
         from_attributes = True
+        
+
+class UserAuthenticate(BaseModel):
+    email: str
+    password: str
+

@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 from typing import AsyncGenerator
 
 from .src import crud, models
-
 from .src import schemas
 from .src.database import Base
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from .src.crud import verify_password, get_password_hash, pwd_context
+from .src.crud import verify_password, get_password_hash, pwd_context, get_user_by_email
+from .src.schemas import UserAuthenticate
 
 # Ersetze die folgende URL mit deiner tatsächlichen Datenbank-URL
 ASYNC_DB_URL = "sqlite+aiosqlite:///./sql_app.db"
@@ -115,12 +115,13 @@ async def fetch_and_store_events(country: str = Query(None, description="Country
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 @app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)):
-    user = await crud.get_user_by_email(db, email=form_data.username)
-    if not user or not verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    # Hier könnte ein JWT Token zurückgegeben werden, für die einfache Authentifizierung reicht ein einfacher Bestätigungstext
-    return {"access_token": user.email, "token_type": "bearer"}
+async def login(user_credentials: UserAuthenticate, db: AsyncSession = Depends(get_async_db)):
+    db_user = await get_user_by_email(db, email=user_credentials.email)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(user_credentials.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    return {"access_token": db_user.email, "token_type": "bearer"}
 
 @app.get("/users/me", response_model=schemas.User)
 async def read_users_me(current_user: schemas.User = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)):
