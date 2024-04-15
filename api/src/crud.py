@@ -1,6 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from . import models, schemas
+from . import models
+from . import schemas
+from passlib.context import CryptContext
+
 
 async def get_user(db: AsyncSession, user_id: int):
     result = await db.execute(select(models.User).filter(models.User.id == user_id))
@@ -63,3 +66,21 @@ async def create_event(db: AsyncSession, event: schemas.EventCreate):
     await db.commit()
     await db.refresh(db_event)
     return db_event
+
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+async def create_user(db: AsyncSession, user: schemas.UserCreate):
+    hashed_password = get_password_hash(user.password)  # Passwort hashen
+    db_user = models.User(email=user.email, hashed_password=hashed_password)
+    db.add(db_user)
+    await db.commit()
+    await db.refresh(db_user)
+    return db_user
+

@@ -29,25 +29,22 @@ export default {
     };
   },
   methods: {
-    async fetchEvents() {
-      console.log("Fetching events for country:", this.country);
-      if (!this.country) {
+  fetchEvents() {
+    const country = this.country; // Stellen Sie sicher, dass `this.country` korrekt gesetzt ist
+      if (!country) {
         alert('Please enter a country code.');
         return;
       }
-      try {
-        console.log("Country before request:", this.country);  // Sollte den ausgewählten Ländercode anzeigen
-        const response = await axios.get(`http://127.0.0.1:8000/events/`, {
-          params: { country: this.country }
+      axios.get(`http://127.0.0.1:8000/events/`, { params: { country } })
+        .then(response => {
+          this.events = response.data;
+        })
+        .catch(error => {
+          console.error("Error fetching events:", error);
+          alert(`Failed to fetch events: ${error.message}`);
         });
-        this.events = response.data;
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        alert(`Failed to fetch events: ${error.message}`);
-      }
     }
-
-  },
+  }
 };
 </script>
 

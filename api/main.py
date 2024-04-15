@@ -1,13 +1,17 @@
 import httpx
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime, timedelta
 from typing import AsyncGenerator
 
-from . import crud, models, schemas
-from .database import Base
+from .src import crud, models
+
+from .src import schemas
+from .src.database import Base
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from .src.crud import verify_password, get_password_hash, pwd_context
 
 # Ersetze die folgende URL mit deiner tatsächlichen Datenbank-URL
 ASYNC_DB_URL = "sqlite+aiosqlite:///./sql_app.db"
@@ -73,13 +77,13 @@ async def read_items(skip: int = 0, limit: int = 100, db: AsyncSession = Depends
     return items
 
 @app.get("/events/", response_model=list[schemas.Event])
-async def fetch_and_store_events(country: str = Query(..., description="Country code, e.g., 'US', 'DE'"), db: AsyncSession = Depends(get_async_db)):
-    print("Country received in fetch_and_store_events:", country)
+async def fetch_and_store_events(country: str = Query(None, description="Country code, e.g., 'US', 'DE'"), db: AsyncSession = Depends(get_async_db)):
+    if not country:
+        return []  # oder eine andere angemessene Antwort
     current_date = datetime.now()
     end_date = current_date + timedelta(days=180)
-    
+
     url = "https://app.ticketmaster.com/discovery/v2/events"
-    
     params = {
         "apikey": "HYWrCxXKy1pGN4Z5ToGZ6cGmkFAqq2Xh",
         "size": 30,
@@ -91,17 +95,52 @@ async def fetch_and_store_events(country: str = Query(..., description="Country 
     async with httpx.AsyncClient() as client:
         response = await client.get(url, params=params)
     events_data = response.json()
-    
+    print(events_data)  # Log the response data
+
     stored_events = []
     if "_embedded" in events_data:
         for event_data in events_data["_embedded"]["events"]:
-            venue_name = event_data.get("_embedded", {}).get("venues", [{}])[0].get("name", "Unbekannter Veranstaltungsort")
             event_create = schemas.EventCreate(
                 name=event_data["name"],
                 date=event_data["dates"]["start"]["localDate"],
-                venue=venue_name,
+                venue=event_data["_embedded"]["venues"][0].get("name", "Unknown Venue"),
                 country=country
             )
             stored_event = await crud.create_event(db=db, event=event_create)
             stored_events.append(stored_event)
     return stored_events
+
+
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+@app.post("/token")
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_async_db)):
+    user = await crud.get_user_by_email(db, email=form_data.username)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect username or password")
+    # Hier könnte ein JWT Token zurückgegeben werden, für die einfache Authentifizierung reicht ein einfacher Bestätigungstext
+    return {"access_token": user.email, "token_type": "bearer"}
+
+@app.get("/users/me", response_model=schemas.User)
+async def read_users_me(current_user: schemas.User = Depends(oauth2_scheme), db: AsyncSession = Depends(get_async_db)):
+    user = await crud.get_user_by_email(db, email=current_user)
+    return user
+
+@app.post("/users/")
+async def create_user(user: schemas.UserCreate, db: AsyncSession = Depends(get_async_db)):
+    db_user = await crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    user.hashed_password = get_password_hash(user.password)
+    return await crud.create_user(db=db, user=user)
+
+
+@app.post("/login/")
+async def login(user: schemas.UserAuthenticate, db: AsyncSession = Depends(get_async_db)):
+    db_user = await crud.get_user_by_email(db, email=user.email)
+    if not db_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not verify_password(user.password, db_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect password")
+    return {"message": "User authenticated successfully"}
