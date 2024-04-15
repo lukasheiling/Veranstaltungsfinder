@@ -23,6 +23,7 @@
           <div class="event-name">{{ event.name }}</div>
           <div class="event-details">
             <span>{{ event.date }}</span> - <span>{{ event.venue }}</span>
+            <a :href="event.url" target="_blank">View on Ticketmaster</a>
           </div>
         </li>
       </ul>

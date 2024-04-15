@@ -31,3 +31,4 @@ class Event(Base):
     date = Column(String, index=True)  # Format YYYY-MM-DD
     venue = Column(String, index=True)
     country = Column(String, index=True)  # Dieses Feld ist nun korrekt definiert.
+    url = Column(String, index=True)

@@ -28,10 +28,10 @@ origins = [
 # Konfiguriere die CORS-Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:8080", "http://127.0.0.1:8080"],  # Liste der Ursprünge, die erlaubt sind
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Erlaube alle Methoden
+    allow_headers=["*"],  # Erlaube alle Header
 )
 
 # Asynchrone Dependency für Datenbanksessions
@@ -104,11 +104,13 @@ async def fetch_and_store_events(country: str = Query(None, description="Country
                 name=event_data["name"],
                 date=event_data["dates"]["start"]["localDate"],
                 venue=event_data["_embedded"]["venues"][0].get("name", "Unknown Venue"),
-                country=country
+                country=country,
+                url=event_data["url"]  # URL des Events hinzufügen
             )
             stored_event = await crud.create_event(db=db, event=event_create)
             stored_events.append(stored_event)
     return stored_events
+
 
 
 
